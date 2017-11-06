@@ -101,8 +101,9 @@
       }
     },
     "dc:description": {
-      "type": "text",
+      "type": "keyword",
       "copy_to": "all_field",
+      "ignore_above": 32765,
       "fields": {
         "fulltext": {
           "analyzer": "fulltext",
