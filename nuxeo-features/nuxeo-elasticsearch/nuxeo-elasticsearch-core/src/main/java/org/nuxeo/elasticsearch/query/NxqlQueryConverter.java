@@ -500,20 +500,34 @@ public final class NxqlQueryConverter {
         return makeStartsWithQuery(NXQL.ECM_PATH, path);
     }
 
-    private static QueryBuilder makeLikeQuery(String op, String name, String value, EsHint hint) {
+    protected static QueryBuilder makeLikeQuery(String op, String name, String value, EsHint hint) {
         String fieldName = name;
+        String analyzer = "fulltext";
+        boolean usedFieldNameHint = false;
+
         if (op.contains("ILIKE")) {
             // ILIKE will work only with a correct mapping
-            value = value.toLowerCase();
             fieldName = name + ".lowercase";
+            analyzer = "lowercase_analyzer";
+        } else if (!fieldName.endsWith(".fulltext")) {
+            fieldName = name + ".fulltext";
         }
+
         if (hint != null && hint.index != null) {
             fieldName = hint.index;
+            usedFieldNameHint = true;
         }
+
+        if (hint != null && hint.analyzer != null) {
+            analyzer = hint.analyzer;
+        }
+
         // convert the value to a wildcard query
         String wildcard = likeToWildcard(value);
-        // use match phrase prefix when possible
-        if (StringUtils.countMatches(wildcard, "*") == 1 && wildcard.endsWith("*") && !wildcard.contains("?")
+
+        //Use match phrase prefix when possible, the search value will be analyzed.
+        //Match queries does not support wildcard characters, or other "advanced" features.
+        if (StringUtils.countMatches(wildcard, "*") <= 1 && !wildcard.startsWith("*") && !wildcard.contains("?")
                 && !wildcard.contains("\\")) {
             MatchPhrasePrefixQueryBuilder query = QueryBuilders.matchPhrasePrefixQuery(fieldName,
                     wildcard.replace("*", ""));
@@ -522,6 +536,14 @@ public final class NxqlQueryConverter {
             }
             return query;
         }
+
+        if (!usedFieldNameHint)
+        {
+            //Wildcard queries are not analyzed but fulltext fields will be lowercase
+            //Only do this if the fieldname hasn't be overidden by a ES hint
+            wildcard = wildcard.toLowerCase();
+        }
+
         return QueryBuilders.wildcardQuery(fieldName, wildcard);
     }
 
