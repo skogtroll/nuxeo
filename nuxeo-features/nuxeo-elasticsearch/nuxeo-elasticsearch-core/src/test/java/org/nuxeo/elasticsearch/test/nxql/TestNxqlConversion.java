@@ -346,7 +346,7 @@ public class TestNxqlConversion {
         String es = NxqlQueryConverter.toESQueryBuilder("select * from Document where f1 LIKE 'foo%'").toString();
         assertEqualsEvenUnderWindows("{\n" +
                 "  \"match_phrase_prefix\" : {\n" +
-                "    \"f1\" : {\n" +
+                "    \"f1.fulltext\" : {\n" +
                 "      \"query\" : \"foo\",\n" +
                 "      \"slop\" : 0,\n" +
                 "      \"max_expansions\" : 50,\n" +
@@ -357,8 +357,8 @@ public class TestNxqlConversion {
         es = NxqlQueryConverter.toESQueryBuilder("select * from Document where f1 LIKE '%Foo%'").toString();
         assertEqualsEvenUnderWindows("{\n" +
                 "  \"wildcard\" : {\n" +
-                "    \"f1\" : {\n" +
-                "      \"wildcard\" : \"*Foo*\",\n" +
+                "    \"f1.fulltext\" : {\n" +
+                "      \"wildcard\" : \"*foo*\",\n" +
                 "      \"boost\" : 1.0\n" +
                 "    }\n" +
                 "  }\n" +
@@ -371,7 +371,7 @@ public class TestNxqlConversion {
                 "        \"must_not\" : [\n" +
                 "          {\n" +
                 "            \"match_phrase_prefix\" : {\n" +
-                "              \"f1\" : {\n" +
+                "              \"f1.fulltext\" : {\n" +
                 "                \"query\" : \"Foo\",\n" +
                 "                \"slop\" : 0,\n" +
                 "                \"max_expansions\" : 50,\n" +
@@ -390,6 +390,19 @@ public class TestNxqlConversion {
                 "}", es);
         // invalid input
         NxqlQueryConverter.toESQueryBuilder("select * from Document where f1 LIKE '(foo.*$#@^'").toString();
+
+        // NXQL escaping
+        es = NxqlQueryConverter.toESQueryBuilder("SELECT * FROM Document WHERE f1 LIKE 'foo\\_bar\\%'").toString();
+        assertEqualsEvenUnderWindows("{\n" +
+                "  \"match_phrase_prefix\" : {\n" +
+                "    \"f1.fulltext\" : {\n" +
+                "      \"query\" : \"foo_bar%\",\n" +
+                "      \"slop\" : 0,\n" +
+                "      \"max_expansions\" : 50,\n" +
+                "      \"boost\" : 1.0\n" +
+                "    }\n" +
+                "  }\n" +
+                "}", es);
     }
 
     @Test
@@ -398,7 +411,7 @@ public class TestNxqlConversion {
         es = NxqlQueryConverter.toESQueryBuilder("SELECT * FROM Document WHERE f1 LIKE '%foo'").toString();
         assertEqualsEvenUnderWindows("{\n" +
                 "  \"wildcard\" : {\n" +
-                "    \"f1\" : {\n" +
+                "    \"f1.fulltext\" : {\n" +
                 "      \"wildcard\" : \"*foo\",\n" +
                 "      \"boost\" : 1.0\n" +
                 "    }\n" +
@@ -407,7 +420,7 @@ public class TestNxqlConversion {
         es = NxqlQueryConverter.toESQueryBuilder("SELECT * FROM Document WHERE f1 LIKE '_foo'").toString();
         assertEqualsEvenUnderWindows("{\n" +
                 "  \"wildcard\" : {\n" +
-                "    \"f1\" : {\n" +
+                "    \"f1.fulltext\" : {\n" +
                 "      \"wildcard\" : \"?foo\",\n" +
                 "      \"boost\" : 1.0\n" +
                 "    }\n" +
@@ -416,7 +429,7 @@ public class TestNxqlConversion {
         es = NxqlQueryConverter.toESQueryBuilder("SELECT * FROM Document WHERE f1 LIKE '?foo'").toString();
         assertEqualsEvenUnderWindows("{\n" +
                 "  \"wildcard\" : {\n" +
-                "    \"f1\" : {\n" +
+                "    \"f1.fulltext\" : {\n" +
                 "      \"wildcard\" : \"\\\\?foo\",\n" +
                 "      \"boost\" : 1.0\n" +
                 "    }\n" +
@@ -426,18 +439,8 @@ public class TestNxqlConversion {
         es = NxqlQueryConverter.toESQueryBuilder("SELECT * FROM Document WHERE f1 LIKE '*foo'").toString();
         assertEqualsEvenUnderWindows("{\n" +
                 "  \"wildcard\" : {\n" +
-                "    \"f1\" : {\n" +
+                "    \"f1.fulltext\" : {\n" +
                 "      \"wildcard\" : \"*foo\",\n" +
-                "      \"boost\" : 1.0\n" +
-                "    }\n" +
-                "  }\n" +
-                "}", es);
-        // NXQL escaping
-        es = NxqlQueryConverter.toESQueryBuilder("SELECT * FROM Document WHERE f1 LIKE 'foo\\_bar\\%'").toString();
-        assertEqualsEvenUnderWindows("{\n" +
-                "  \"wildcard\" : {\n" +
-                "    \"f1\" : {\n" +
-                "      \"wildcard\" : \"foo_bar%\",\n" +
                 "      \"boost\" : 1.0\n" +
                 "    }\n" +
                 "  }\n" +
@@ -450,7 +453,7 @@ public class TestNxqlConversion {
         assertEqualsEvenUnderWindows("{\n" +
                 "  \"match_phrase_prefix\" : {\n" +
                 "    \"f1.lowercase\" : {\n" +
-                "      \"query\" : \"foo\",\n" +
+                "      \"query\" : \"Foo\",\n" +
                 "      \"slop\" : 0,\n" +
                 "      \"max_expansions\" : 50,\n" +
                 "      \"boost\" : 1.0\n" +
@@ -475,7 +478,7 @@ public class TestNxqlConversion {
                 "          {\n" +
                 "            \"match_phrase_prefix\" : {\n" +
                 "              \"f1.lowercase\" : {\n" +
-                "                \"query\" : \"foo\",\n" +
+                "                \"query\" : \"Foo\",\n" +
                 "                \"slop\" : 0,\n" +
                 "                \"max_expansions\" : 50,\n" +
                 "                \"boost\" : 1.0\n" +
@@ -989,7 +992,7 @@ public class TestNxqlConversion {
                 "          \"should\" : [\n" +
                 "            {\n" +
                 "              \"match_phrase_prefix\" : {\n" +
-                "                \"f1\" : {\n" +
+                "                \"f1.fulltext\" : {\n" +
                 "                  \"query\" : \"1\",\n" +
                 "                  \"slop\" : 0,\n" +
                 "                  \"max_expansions\" : 50,\n" +
@@ -999,7 +1002,7 @@ public class TestNxqlConversion {
                 "            },\n" +
                 "            {\n" +
                 "              \"match_phrase_prefix\" : {\n" +
-                "                \"f2\" : {\n" +
+                "                \"f2.fulltext\" : {\n" +
                 "                  \"query\" : \"2\",\n" +
                 "                  \"slop\" : 0,\n" +
                 "                  \"max_expansions\" : 50,\n" +

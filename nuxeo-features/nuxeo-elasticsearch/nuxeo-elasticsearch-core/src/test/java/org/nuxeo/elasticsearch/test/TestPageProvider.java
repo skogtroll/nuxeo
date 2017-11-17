@@ -250,7 +250,7 @@ public class TestPageProvider {
                 "    \"must\" : [\n" +
                 "      {\n" +
                 "        \"match_phrase_prefix\" : {\n" +
-                "          \"dc:title\" : {\n" +
+                "          \"dc:title.fulltext\" : {\n" +
                 "            \"query\" : \"Test\",\n" +
                 "            \"slop\" : 0,\n" +
                 "            \"max_expansions\" : 50,\n" +
@@ -581,9 +581,11 @@ public class TestPageProvider {
                 "        }\n" +
                 "      },\n" +
                 "      {\n" +
-                "        \"wildcard\" : {\n" +
-                "          \"dc:title\" : {\n" +
-                "            \"wildcard\" : \"bar\",\n" +
+                "        \"match_phrase_prefix\" : {\n" +
+                "          \"dc:title.fulltext\" : {\n" +
+                "            \"query\" : \"bar\",\n" +
+                "            \"slop\" : 0,\n" +
+                "            \"max_expansions\" : 50,\n" +
                 "            \"boost\" : 1.0\n" +
                 "          }\n" +
                 "        }\n" +
@@ -621,9 +623,11 @@ public class TestPageProvider {
                 "        }\n" +
                 "      },\n" +
                 "      {\n" +
-                "        \"wildcard\" : {\n" +
-                "          \"dc:title\" : {\n" +
-                "            \"wildcard\" : \"bar\",\n" +
+                "        \"match_phrase_prefix\" : {\n" +
+                "          \"dc:title.fulltext\" : {\n" +
+                "            \"query\" : \"bar\",\n" +
+                "            \"slop\" : 0,\n" +
+                "            \"max_expansions\" : 50,\n" +
                 "            \"boost\" : 1.0\n" +
                 "          }\n" +
                 "        }\n" +
@@ -681,9 +685,11 @@ public class TestPageProvider {
                 "        }\n" +
                 "      },\n" +
                 "      {\n" +
-                "        \"wildcard\" : {\n" +
-                "          \"dc:title\" : {\n" +
-                "            \"wildcard\" : \"bar\",\n" +
+                "        \"match_phrase_prefix\" : {\n" +
+                "          \"dc:title.fulltext\" : {\n" +
+                "            \"query\" : \"bar\",\n" +
+                "            \"slop\" : 0,\n" +
+                "            \"max_expansions\" : 50,\n" +
                 "            \"boost\" : 1.0\n" +
                 "          }\n" +
                 "        }\n" +
