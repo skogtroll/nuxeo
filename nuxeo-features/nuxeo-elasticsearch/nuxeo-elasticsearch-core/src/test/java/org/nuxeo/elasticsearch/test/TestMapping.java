@@ -92,7 +92,7 @@ public class TestMapping {
 
         doc = session.createDocumentModel("/", "testDoc2", "File");
         doc.setPropertyValue("dc:title", "Mixed Case");
-        doc.setPropertyValue("dc:description", "MiXeD cAsE dEsC");
+        doc.setPropertyValue("dc:description", "MixedCaseDesc");
         doc = session.createDocument(doc);
 
         doc = session.createDocumentModel("/", "testDoc3", "File");
@@ -113,7 +113,7 @@ public class TestMapping {
         Assert.assertEquals(1, ret.totalSize());
 
         ret = ess.query(new NxQueryBuilder(session).nxql(
-                "SELECT * FROM Document WHERE dc:description ILIKE 'mixED case desc'"));
+                "SELECT * FROM Document WHERE dc:description ILIKE 'MIXEDcaseDESC'"));
         Assert.assertEquals(1, ret.totalSize());
 
         ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE ecm:fulltext.dc:title LIKE 'case%'"));
@@ -121,13 +121,25 @@ public class TestMapping {
         ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE ecm:fulltext.dc:title LIKE 'Case%'"));
         Assert.assertEquals(3, ret.totalSize());
 
-        // case sensitive for other operation
+        //Like support is case-insensitive and uses the fulltext field.
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'MIXED case DESC'"));
+        Assert.assertEquals(1, ret.totalSize());
         ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE '%Case%'"));
-        Assert.assertEquals(0, ret.totalSize());
+        Assert.assertEquals(3, ret.totalSize());
         ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'Upper%'"));
-        Assert.assertEquals(0, ret.totalSize());
+        Assert.assertEquals(1, ret.totalSize());
         ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'UPPER%'"));
-        Assert.assertEquals(0, ret.totalSize());
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'Cas%'"));
+        Assert.assertEquals(3, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'UPP%'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'cas%'"));
+        Assert.assertEquals(3, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'upp%'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'UPP%'"));
+        Assert.assertEquals(1, ret.totalSize());
 
         ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE ecm:fulltext.dc:description LIKE '%Case%'"));
         Assert.assertEquals(3, ret.totalSize());
@@ -136,8 +148,70 @@ public class TestMapping {
         ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE ecm:fulltext.dc:description LIKE 'UPPER%'"));
         Assert.assertEquals(1, ret.totalSize());
 
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'mixed c%'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'Mixed*'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'Mixed%'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'Case'"));
+        Assert.assertEquals(3, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'case'"));
+        Assert.assertEquals(3, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'cas*'"));
+        Assert.assertEquals(3, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'cas%'"));
+        Assert.assertEquals(3, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE '*cas*'"));
+        Assert.assertEquals(3, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE '*Cas*'"));
+        Assert.assertEquals(3, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE '%cas%'"));
+        Assert.assertEquals(3, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE '%Cas%'"));
+        Assert.assertEquals(3, ret.totalSize());
+
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'case desc'"));
+        Assert.assertEquals(3, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE '*desc*'"));
+        Assert.assertEquals(3, ret.totalSize());
+
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE ecm:fulltext.dc:description LIKE 'mixed case'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE ecm:fulltext.dc:description LIKE 'MIXED case'"));
         Assert.assertEquals(1, ret.totalSize());
 
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'mixed CASE'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:description LIKE 'MIXED case'"));
+        Assert.assertEquals(1, ret.totalSize());
+
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'mixed case'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'MIXED case'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'mixed CAS*'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'MIXED cas%'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title LIKE 'MIXED cas'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title.fulltext LIKE 'MIXED cas*'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title.fulltext LIKE 'mixed CAS%'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE dc:title.fulltext LIKE 'MIXED cas'"));
+        Assert.assertEquals(1, ret.totalSize());
+
+        //Test hints
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE  /*+ES: INDEX(dc:title) ANALYZER(default) */  dc:title LIKE 'Mixed Cas*'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE  /*+ES: INDEX(dc:title) ANALYZER(default) */  dc:title LIKE 'Mixed cas*'"));
+        Assert.assertEquals(0, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE  /*+ES: INDEX(dc:title) ANALYZER(default) */  dc:title LIKE '*Cas*'"));
+        Assert.assertEquals(1, ret.totalSize());
+        ret = ess.query(new NxQueryBuilder(session).nxql("SELECT * FROM Document WHERE  /*+ES: INDEX(dc:title) ANALYZER(default) */  dc:title LIKE 'Mixed Case'"));
+        Assert.assertEquals(1, ret.totalSize());
     }
 
     @Test
