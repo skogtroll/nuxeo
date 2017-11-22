@@ -19,6 +19,7 @@
  */
 package org.nuxeo.elasticsearch.query;
 
+import static org.nuxeo.elasticsearch.ElasticSearchConstants.BINARYTEXT_FIELD;
 import static org.nuxeo.elasticsearch.ElasticSearchConstants.FULLTEXT_FIELD;
 
 import java.io.IOException;
@@ -625,6 +626,10 @@ public final class NxqlQueryConverter {
                 query.field(index);
             }
         } else {
+            if (FULLTEXT_FIELD.equals(name)) {
+                //add both name and 'ecm:binarytext'
+                query.field(BINARYTEXT_FIELD);
+            }
             query.field(name);
         }
         return query;

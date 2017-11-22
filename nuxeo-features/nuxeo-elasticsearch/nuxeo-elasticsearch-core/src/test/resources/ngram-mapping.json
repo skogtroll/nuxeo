@@ -45,8 +45,7 @@
     },
     "ecm:binarytext": {
       "type": "text",
-      "analyzer": "fulltext",
-      "copy_to": "all_field"
+      "analyzer": "fulltext"
     },
     "ecm:path": {
       "fields": {

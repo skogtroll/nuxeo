@@ -751,7 +751,8 @@ public class TestNxqlConversion {
                 "  \"simple_query_string\" : {\n" +
                 "    \"query\" : \"+foo -bar\",\n" +
                 "    \"fields\" : [\n" +
-                "      \"all_field^1.0\"\n" +
+                "      \"all_field^1.0\",\n" +
+                "      \"ecm:binarytext^1.0\"\n" +
                 "    ],\n" +
                 "    \"analyzer\" : \"fulltext\",\n" +
                 "    \"flags\" : -1,\n" +
@@ -768,7 +769,8 @@ public class TestNxqlConversion {
                 "  \"simple_query_string\" : {\n" +
                 "    \"query\" : \"+foo -bar\",\n" +
                 "    \"fields\" : [\n" +
-                "      \"all_field^1.0\"\n" +
+                "      \"all_field^1.0\",\n" +
+                "      \"ecm:binarytext^1.0\"\n" +
                 "    ],\n" +
                 "    \"analyzer\" : \"fulltext\",\n" +
                 "    \"flags\" : -1,\n" +
@@ -823,7 +825,8 @@ public class TestNxqlConversion {
                 "  \"simple_query_string\" : {\n" +
                 "    \"query\" : \"foo bar\",\n" +
                 "    \"fields\" : [\n" +
-                "      \"all_field^1.0\"\n" +
+                "      \"all_field^1.0\",\n" +
+                "      \"ecm:binarytext^1.0\"\n" +
                 "    ],\n" +
                 "    \"analyzer\" : \"fulltext\",\n" +
                 "    \"flags\" : -1,\n" +
