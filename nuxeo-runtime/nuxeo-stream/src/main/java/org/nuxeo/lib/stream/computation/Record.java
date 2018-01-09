@@ -26,10 +26,12 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Basic data object that contains: key, watermark, flag and data.
@@ -188,6 +190,24 @@ public class Record implements Externalizable {
             ++ordinal;
         }
         return ret;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        Record record = (Record) o;
+        return watermark == record.watermark && flags == record.flags && Objects.equals(key, record.key)
+                && Arrays.equals(data, record.data);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(watermark, flags, key);
+        result = 31 * result + Arrays.hashCode(data);
+        return result;
     }
 
     public enum Flag {
