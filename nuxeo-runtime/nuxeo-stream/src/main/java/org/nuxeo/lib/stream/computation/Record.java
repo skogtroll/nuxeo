@@ -44,18 +44,39 @@ public class Record implements Externalizable {
 
     protected long watermark;
 
-    protected EnumSet<Flag> flags;
+    protected byte flags;
+
+    // The enumSet representation of the flags is transient because serializer don't handle this type
+    protected transient EnumSet<Flag> flagsEnumSet;
 
     protected String key;
 
     protected byte[] data;
+
+    public Record() {
+        // Empty constructor required for deserialization
+    }
+
+    public static Record of(String key, byte[] data) {
+        return new Record(key, data, 0, DEFAULT_FLAG);
+    }
+
+    public Record(String key, byte[] data, long watermark, EnumSet<Flag> flags) {
+        this.key = key;
+        this.data = data;
+        this.watermark = watermark;
+        setFlags(flags);
+    }
 
     public long getWatermark() {
         return watermark;
     }
 
     public EnumSet<Flag> getFlags() {
-        return flags;
+        if (flagsEnumSet == null) {
+            flagsEnumSet = decodeFlags(flags);
+        }
+        return flagsEnumSet;
     }
 
     public String getKey() {
@@ -71,7 +92,8 @@ public class Record implements Externalizable {
     }
 
     public void setFlags(EnumSet<Flag> flags) {
-        this.flags = flags;
+        this.flags = (byte) encodeFlags(flags);
+        this.flagsEnumSet = flags;
     }
 
     public void setKey(String key) {
@@ -80,21 +102,6 @@ public class Record implements Externalizable {
 
     public void setData(byte[] data) {
         this.data = data;
-    }
-
-    public Record() {
-        // Empty constructor required for Avro deserialization
-    }
-
-    public Record(String key, byte[] data, long watermark, EnumSet<Flag> flags) {
-        this.key = key;
-        this.data = data;
-        this.watermark = watermark;
-        this.flags = flags;
-    }
-
-    public static Record of(String key, byte[] data) {
-        return new Record(key, data, 0, DEFAULT_FLAG);
     }
 
     @Override
@@ -114,14 +121,15 @@ public class Record implements Externalizable {
             Watermark wm = Watermark.ofValue(watermark);
             wmDate = ", wmDate=" + dateFormat.format(new Date(wm.getTimestamp()));
         }
-        return "Record{" + "watermark=" + watermark + wmDate + ", flags=" + flags + ", key='" + key + '\''
+        return "Record{" + "watermark=" + watermark + wmDate + ", flags=" + getFlags() + ", key='" + key + '\''
                 + ", data.length=" + ((data == null) ? 0 : data.length) + overview + '}';
     }
 
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeLong(watermark);
-        out.writeShort(encodeFlags());
+        // use a short for backward compatibility
+        out.writeShort(flags);
         out.writeObject(key);
         if (data == null || data.length == 0) {
             out.writeInt(0);
@@ -131,21 +139,11 @@ public class Record implements Externalizable {
         }
     }
 
-    protected short encodeFlags() {
-        // adapted from Adamski: http://stackoverflow.com/questions/2199399/storing-enumset-in-a-database
-        short ret = 0;
-        if (flags != null) {
-            for (Flag val : flags) {
-                ret = (short) (ret | (1 << val.ordinal()));
-            }
-        }
-        return ret;
-    }
-
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         this.watermark = in.readLong();
-        this.flags = decodeFlags(in.readShort());
+        // use a short for backward compatibility
+        this.flags = (byte) in.readShort();
         this.key = (String) in.readObject();
         int dataLength = in.readInt();
         if (dataLength == 0) {
@@ -162,6 +160,17 @@ public class Record implements Externalizable {
                 pos += byteRead;
             }
         }
+    }
+
+    protected short encodeFlags(EnumSet<Flag> enumSet) {
+        // adapted from Adamski: http://stackoverflow.com/questions/2199399/storing-enumset-in-a-database
+        short ret = 0;
+        if (enumSet != null) {
+            for (Flag val : enumSet) {
+                ret = (short) (ret | (1 << val.ordinal()));
+            }
+        }
+        return ret;
     }
 
     protected EnumSet<Flag> decodeFlags(short encoded) {
@@ -182,7 +191,8 @@ public class Record implements Externalizable {
     }
 
     public enum Flag {
-        DEFAULT, COMMIT, POISON_PILL;
+        // limited to 8 flags so it can be encoded as a byte
+        DEFAULT, COMMIT, POISON_PILL, SKIP, TRACE, PAUSE;
 
         public static final EnumSet<Flag> ALL_OPTS = EnumSet.allOf(Flag.class);
     }
