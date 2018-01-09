@@ -87,8 +87,8 @@ public class TestStreamService {
         try (LogTailer<Record> tailer = manager.createTailer("myGroup", logName)) {
             LogRecord<Record> logRecord = tailer.read(Duration.ofSeconds(1));
             assertNotNull(logRecord);
-            assertEquals(key, logRecord.message().key);
-            assertEquals(value, new String(logRecord.message().data, "UTF-8"));
+            assertEquals(key, logRecord.message().getKey());
+            assertEquals(value, new String(logRecord.message().getData(), "UTF-8"));
         }
         // never close the manager this is done by the service
     }
@@ -108,7 +108,7 @@ public class TestStreamService {
         // the computation should forward this message to the output
         LogRecord<Record> logRecord = tailer.read(Duration.ofSeconds(1));
         assertNotNull("Record not found in output stream", logRecord);
-        assertEquals(key, logRecord.message().key);
-        assertEquals(value, new String(logRecord.message().data, "UTF-8"));
+        assertEquals(key, logRecord.message().getKey());
+        assertEquals(value, new String(logRecord.message().getData(), "UTF-8"));
     }
 }

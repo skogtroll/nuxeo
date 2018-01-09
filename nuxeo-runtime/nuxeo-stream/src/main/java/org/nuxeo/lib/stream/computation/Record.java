@@ -42,16 +42,48 @@ public class Record implements Externalizable {
     // Externalizable do rely on serialVersionUID
     static final long serialVersionUID = 20170529L;
 
-    public long watermark;
+    protected long watermark;
 
-    public EnumSet<Flag> flags;
+    protected EnumSet<Flag> flags;
 
-    public String key;
+    protected String key;
 
-    public byte[] data;
+    protected byte[] data;
+
+    public long getWatermark() {
+        return watermark;
+    }
+
+    public EnumSet<Flag> getFlags() {
+        return flags;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public byte[] getData() {
+        return data;
+    }
+
+    public void setWatermark(long watermark) {
+        this.watermark = watermark;
+    }
+
+    public void setFlags(EnumSet<Flag> flags) {
+        this.flags = flags;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public void setData(byte[] data) {
+        this.data = data;
+    }
 
     public Record() {
-
+        // Empty constructor required for Avro deserialization
     }
 
     public Record(String key, byte[] data, long watermark, EnumSet<Flag> flags) {
