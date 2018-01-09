@@ -18,11 +18,7 @@
  */
 package org.nuxeo.lib.stream.log.kafka;
 
-import java.io.ByteArrayOutputStream;
 import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectOutput;
-import java.io.ObjectOutputStream;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Objects;
@@ -40,6 +36,8 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.Bytes;
+import org.nuxeo.lib.stream.codec.Codec;
+import org.nuxeo.lib.stream.codec.SerializableCodec;
 import org.nuxeo.lib.stream.log.LogOffset;
 import org.nuxeo.lib.stream.log.internals.CloseableLogAppender;
 import org.nuxeo.lib.stream.log.internals.LogOffsetImpl;
@@ -65,13 +63,21 @@ public class KafkaLogAppender<M extends Externalizable> implements CloseableLogA
 
     protected final String name;
 
+    protected final Codec<M> codec;
+
     protected KafkaProducer<String, Bytes> producer;
 
     protected boolean closed;
 
-    private KafkaLogAppender(String topic, String name, Properties producerProperties, Properties consumerProperties) {
+    private KafkaLogAppender(Codec<M> codec, String topic, String name, Properties producerProperties,
+            Properties consumerProperties) {
         this.topic = topic;
         this.name = name;
+        if (codec != null) {
+            this.codec = codec;
+        } else {
+            this.codec = new SerializableCodec<>();
+        }
         this.producerProps = producerProperties;
         this.consumerProps = consumerProperties;
         this.producer = new KafkaProducer<>(this.producerProps);
@@ -81,9 +87,9 @@ public class KafkaLogAppender<M extends Externalizable> implements CloseableLogA
         }
     }
 
-    public static <M extends Externalizable> KafkaLogAppender<M> open(String topic, String name,
+    public static <M extends Externalizable> KafkaLogAppender<M> open(Codec<M> codec, String topic, String name,
             Properties producerProperties, Properties consumerProperties) {
-        return new KafkaLogAppender<>(topic, name, producerProperties, consumerProperties);
+        return new KafkaLogAppender<>(codec, topic, name, producerProperties, consumerProperties);
     }
 
     @Override
@@ -101,8 +107,8 @@ public class KafkaLogAppender<M extends Externalizable> implements CloseableLogA
     }
 
     @Override
-    public LogOffset append(int partition, Externalizable message) {
-        Bytes value = Bytes.wrap(messageAsByteArray(message));
+    public LogOffset append(int partition, M message) {
+        Bytes value = Bytes.wrap(codec.encode(message));
         String key = String.valueOf(partition);
         ProducerRecord<String, Bytes> record = new ProducerRecord<>(topic, partition, key, value);
         Future<RecordMetadata> future = producer.send(record);
@@ -122,18 +128,6 @@ public class KafkaLogAppender<M extends Externalizable> implements CloseableLogA
                     len, key, message));
         }
         return ret;
-    }
-
-    protected byte[] messageAsByteArray(Externalizable message) {
-        ObjectOutput out;
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            out = new ObjectOutputStream(bos);
-            out.writeObject(message);
-            out.flush();
-            return bos.toByteArray();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Override

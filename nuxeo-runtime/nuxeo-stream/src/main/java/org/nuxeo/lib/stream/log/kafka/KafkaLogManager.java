@@ -33,6 +33,7 @@ import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.utils.Bytes;
+import org.nuxeo.lib.stream.codec.Codec;
 import org.nuxeo.lib.stream.log.LogLag;
 import org.nuxeo.lib.stream.log.LogPartition;
 import org.nuxeo.lib.stream.log.LogTailer;
@@ -100,15 +101,16 @@ public class KafkaLogManager extends AbstractLogManager {
     }
 
     @Override
-    public <M extends Externalizable> CloseableLogAppender<M> createAppender(String name) {
-        return KafkaLogAppender.open(getTopicName(name), name, producerProperties, consumerProperties);
+    public <M extends Externalizable> CloseableLogAppender<M> createAppender(String name, Codec<M> codec) {
+        return KafkaLogAppender.open(codec, getTopicName(name), name, producerProperties, consumerProperties);
     }
 
     @Override
-    protected <M extends Externalizable> LogTailer<M> doCreateTailer(Collection<LogPartition> partitions,
-            String group) {
+    protected <M extends Externalizable> LogTailer<M> doCreateTailer(Collection<LogPartition> partitions, String group,
+            Codec<M> codec) {
         partitions.forEach(this::checkValidPartition);
-        return KafkaLogTailer.createAndAssign(prefix, partitions, group, (Properties) consumerProperties.clone());
+        return KafkaLogTailer.createAndAssign(codec, prefix, partitions, group,
+                (Properties) consumerProperties.clone());
     }
 
     protected void checkValidPartition(LogPartition partition) {
@@ -145,8 +147,8 @@ public class KafkaLogManager extends AbstractLogManager {
 
     @Override
     protected <M extends Externalizable> LogTailer<M> doSubscribe(String group, Collection<String> names,
-            RebalanceListener listener) {
-        return KafkaLogTailer.createAndSubscribe(prefix, names, group, (Properties) consumerProperties.clone(),
+            RebalanceListener listener, Codec<M> codec) {
+        return KafkaLogTailer.createAndSubscribe(codec, prefix, names, group, (Properties) consumerProperties.clone(),
                 listener);
     }
 

@@ -18,11 +18,7 @@
  */
 package org.nuxeo.lib.stream.log.kafka;
 
-import java.io.ByteArrayInputStream;
 import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectInputStream;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
@@ -46,6 +42,8 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.utils.Bytes;
+import org.nuxeo.lib.stream.codec.Codec;
+import org.nuxeo.lib.stream.codec.SerializableCodec;
 import org.nuxeo.lib.stream.log.LogOffset;
 import org.nuxeo.lib.stream.log.LogPartition;
 import org.nuxeo.lib.stream.log.LogRecord;
@@ -70,6 +68,8 @@ public class KafkaLogTailer<M extends Externalizable> implements LogTailer<M>, C
 
     protected final Queue<ConsumerRecord<String, Bytes>> records = new LinkedList<>();
 
+    protected final Codec<M> codec;
+
     protected KafkaConsumer<String, Bytes> consumer;
 
     protected String id;
@@ -87,7 +87,12 @@ public class KafkaLogTailer<M extends Externalizable> implements LogTailer<M>, C
 
     protected boolean isRebalanced;
 
-    protected KafkaLogTailer(String prefix, String group, Properties consumerProps) {
+    protected KafkaLogTailer(Codec<M> codec, String prefix, String group, Properties consumerProps) {
+        if (codec == null) {
+            this.codec = new SerializableCodec<>();
+        } else {
+            this.codec = codec;
+        }
         Objects.requireNonNull(group);
         this.prefix = prefix;
         this.group = group;
@@ -96,9 +101,9 @@ public class KafkaLogTailer<M extends Externalizable> implements LogTailer<M>, C
 
     }
 
-    public static <M extends Externalizable> KafkaLogTailer<M> createAndAssign(String prefix,
+    public static <M extends Externalizable> KafkaLogTailer<M> createAndAssign(Codec<M> codec, String prefix,
             Collection<LogPartition> partitions, String group, Properties consumerProps) {
-        KafkaLogTailer<M> ret = new KafkaLogTailer<>(prefix, group, consumerProps);
+        KafkaLogTailer<M> ret = new KafkaLogTailer<>(codec, prefix, group, consumerProps);
         ret.id = buildId(ret.group, partitions);
         ret.partitions = partitions;
         ret.topicPartitions = partitions.stream()
@@ -110,9 +115,9 @@ public class KafkaLogTailer<M extends Externalizable> implements LogTailer<M>, C
         return ret;
     }
 
-    public static <M extends Externalizable> KafkaLogTailer<M> createAndSubscribe(String prefix,
+    public static <M extends Externalizable> KafkaLogTailer<M> createAndSubscribe(Codec<M> codec, String prefix,
             Collection<String> names, String group, Properties consumerProps, RebalanceListener listener) {
-        KafkaLogTailer<M> ret = new KafkaLogTailer<>(prefix, group, consumerProps);
+        KafkaLogTailer<M> ret = new KafkaLogTailer<>(codec, prefix, group, consumerProps);
         ret.id = buildSubscribeId(ret.group, names);
         ret.names = names;
         Collection<String> topics = names.stream().map(name -> prefix + name).collect(Collectors.toList());
@@ -153,7 +158,7 @@ public class KafkaLogTailer<M extends Externalizable> implements LogTailer<M>, C
         }
         ConsumerRecord<String, Bytes> record = records.poll();
         lastOffsets.put(new TopicPartition(record.topic(), record.partition()), record.offset());
-        M value = messageOf(record.value());
+        M value = codec.decode(record.value().get());
         LogPartition partition = LogPartition.of(getNameForTopic(record.topic()), record.partition());
         LogOffset offset = new LogOffsetImpl(partition, record.offset());
         if (log.isDebugEnabled()) {
@@ -164,27 +169,6 @@ public class KafkaLogTailer<M extends Externalizable> implements LogTailer<M>, C
 
     protected String getNameForTopic(String topic) {
         return topic.replaceFirst(prefix, "");
-    }
-
-    @SuppressWarnings("unchecked")
-    protected M messageOf(Bytes value) {
-        // TODO: switch to commons-lang3 SerializationUtils
-        ByteArrayInputStream bis = new ByteArrayInputStream(value.get());
-        ObjectInput in = null;
-        try {
-            in = new ObjectInputStream(bis);
-            return (M) in.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        } finally {
-            try {
-                if (in != null) {
-                    in.close();
-                }
-            } catch (IOException ex) {
-                // ignore close exception
-            }
-        }
     }
 
     protected int poll(Duration timeout) throws InterruptedException {
