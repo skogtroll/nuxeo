@@ -44,6 +44,8 @@ import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 
+import javax.xml.ws.handler.LogicalHandler;
+
 /**
  * Chronicle Queue implementation of LogAppender.
  *
@@ -260,6 +262,11 @@ public class ChronicleLogAppender<M extends Externalizable> implements Closeable
     @Override
     public boolean closed() {
         return closed;
+    }
+
+    @Override
+    public Codec<M> getCodec() {
+        return codec;
     }
 
     protected boolean isProcessed(ChronicleLogOffsetTracker tracker, long offset) {

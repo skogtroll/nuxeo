@@ -22,6 +22,8 @@ import java.io.Externalizable;
 import java.time.Duration;
 import java.util.Collection;
 
+import org.nuxeo.lib.stream.codec.Codec;
+
 /**
  * Sequential reader for a partition or multiple partitions. A tailer is not thread safe and should not be shared by
  * multiple threads.
@@ -104,4 +106,11 @@ public interface LogTailer<M extends Externalizable> extends AutoCloseable {
      * Returns {@code true} if the tailer has been closed.
      */
     boolean closed();
+
+    /**
+     * Returns the codec used to read the records
+     *
+     * @since 10.1
+     */
+    Codec<M> getCodec();
 }

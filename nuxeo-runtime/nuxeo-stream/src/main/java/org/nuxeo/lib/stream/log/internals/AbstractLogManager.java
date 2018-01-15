@@ -69,6 +69,7 @@ public abstract class AbstractLogManager implements LogManager {
     public <M extends Externalizable> LogTailer<M> createTailer(String group, Collection<LogPartition> partitions,
             Codec<M> codec) {
         partitions.forEach(partition -> checkInvalidAssignment(group, partition));
+        partitions.forEach(partition -> checkInvalidCodec(partition, codec));
         LogTailer<M> ret = doCreateTailer(partitions, group, codec);
         partitions.forEach(partition -> tailersAssignments.put(new LogPartitionGroup(group, partition), ret));
         tailers.add(ret);
@@ -100,15 +101,43 @@ public abstract class AbstractLogManager implements LogManager {
         }
     }
 
+    protected void checkInvalidCodec(LogPartition partition, Codec codec) {
+        String codecClass = codec == null ? null : codec.getClass().getName();
+        if (appenders.containsKey(partition.name())) {
+            Codec appCodec = getAppender(partition.name()).getCodec();
+            String appCodecClass = appCodec == null ? null : appCodec.getClass().getName();
+            if (!Objects.equals(codecClass, appCodecClass)) {
+                throw new IllegalArgumentException(
+                        String.format("Try to tail on Log %s with different codec: %s instead of: %s", partition.name(),
+                                appCodecClass, codecClass));
+            }
+        }
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public synchronized <M extends Externalizable> LogAppender<M> getAppender(String name, Codec<M> codec) {
-        return (LogAppender<M>) appenders.computeIfAbsent(name, n -> {
+        LogAppender<M> ret = (LogAppender<M>) appenders.computeIfAbsent(name, n -> {
             if (exists(n)) {
                 return createAppender(n, codec);
             }
-            throw new IllegalArgumentException("unknown Log name: " + n);
+            throw new IllegalArgumentException("Unknown Log name: " + n);
         });
+        if (codec == null) {
+            // the requested codec is not known so no check
+            return ret;
+        }
+        if (ret.getCodec() == null) {
+            throw new IllegalArgumentException(String.format(
+                    "The appender for Log %s exists with a default codec, cannot use a different codec: %s", name,
+                    codec.getClass()));
+        }
+        if (!ret.getCodec().getClass().getName().equals(codec.getClass().getName())) {
+            throw new IllegalArgumentException(
+                    String.format("The appender for Log %s exists with a %s codec, cannot use a different codec: %s",
+                            name, codec.getClass(), ret.getCodec().getClass()));
+        }
+        return ret;
     }
 
     @Override

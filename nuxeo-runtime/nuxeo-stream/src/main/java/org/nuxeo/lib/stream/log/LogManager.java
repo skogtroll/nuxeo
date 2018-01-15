@@ -117,7 +117,7 @@ public interface LogManager extends AutoCloseable {
      * @since 10.1
      */
     default <M extends Externalizable> LogTailer<M> createTailer(String group, String name, Codec<M> codec) {
-        int size = getAppender(name).size();
+        int size = getAppender(name, codec).size();
         return createTailer(group,
                 IntStream.range(0, size).boxed().map(partition -> new LogPartition(name, partition)).collect(
                         Collectors.toList()),

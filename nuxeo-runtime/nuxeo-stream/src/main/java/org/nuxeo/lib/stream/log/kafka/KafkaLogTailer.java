@@ -348,6 +348,11 @@ public class KafkaLogTailer<M extends Externalizable> implements LogTailer<M>, C
     }
 
     @Override
+    public Codec<M> getCodec() {
+        return codec;
+    }
+
+    @Override
     public void close() {
         if (consumer != null) {
             log.info("Closing tailer: " + id);

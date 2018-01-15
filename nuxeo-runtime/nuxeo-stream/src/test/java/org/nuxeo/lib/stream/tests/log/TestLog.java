@@ -22,7 +22,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.UnsupportedEncodingException;
+import java.security.Key;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,7 +32,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.avro.AvroRuntimeException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.After;
@@ -54,7 +53,6 @@ import org.nuxeo.lib.stream.log.LogRecord;
 import org.nuxeo.lib.stream.log.LogTailer;
 import org.nuxeo.lib.stream.log.RebalanceException;
 import org.nuxeo.lib.stream.tests.KeyValueMessage;
-import sun.font.TrueTypeFont;
 
 public abstract class TestLog {
     protected static final Log log = LogFactory.getLog(TestLog.class);
@@ -734,7 +732,6 @@ public abstract class TestLog {
         assertEquals(LogLag.of(NB_APPENDERS * NB_MSG), manager.getLag(logName, "counter"));
     }
 
-
     @Test
     public void testNoCodec() throws Exception {
         testCodec(null);
@@ -788,25 +785,45 @@ public abstract class TestLog {
     }
 
     @Test
-    public void testMixingCodec() throws Exception {
+    public void testCodecCheckAppender() throws Exception {
         final int LOG_SIZE = 1;
         final String GROUP = "defaultTest";
         manager.createIfNotExists(logName, LOG_SIZE);
         KeyValueMessage msg1 = KeyValueMessage.of("1234567890", "0987654321".getBytes("UTF-8"));
 
-        Codec<KeyValueMessage> codecWrite = new SerializableCodec<>();
-        Codec<KeyValueMessage> codecRead = new AvroBinaryCodec<>(KeyValueMessage.class);
-        LogAppender<KeyValueMessage> appender = manager.getAppender(logName, codecWrite);
-        appender.append(0, msg1);
+        Codec<KeyValueMessage> codec1 = new AvroBinaryCodec<>(KeyValueMessage.class);
+        Codec<KeyValueMessage> codec2 = new SerializableCodec<>();
 
-        try (LogTailer<KeyValueMessage> tailer = manager.createTailer(GROUP, LogPartition.of(logName, 0), codecRead)) {
-            try {
-                tailer.read(DEF_TIMEOUT);
-                fail("Try to read with a different codec should fail");
-            } catch (AvroRuntimeException e) {
-                // expected Decoding datum failed
-            }
+        LogAppender<KeyValueMessage> appender = manager.getAppender(logName, codec1);
+        appender.append(0, msg1);
+        try {
+            LogAppender<KeyValueMessage> appender2 = manager.getAppender(logName, codec2);
+            fail("Should not be possible to open an appender with a different codec");
+        } catch (IllegalArgumentException e) {
+            // expected
         }
+
+        try {
+            LogTailer<KeyValueMessage> tailer = manager.createTailer(GROUP, logName, codec2);
+            fail("Should not be possible to read an appender with a different codec");
+        } catch (IllegalArgumentException e) {
+            // expected Decoding datum failed
+        }
+
+        try {
+            LogTailer<KeyValueMessage> tailer = manager.createTailer(GROUP, logName);
+            fail("Should not be possible to read an appender without explicit codec");
+        } catch (IllegalArgumentException e) {
+            // expected Decoding datum failed
+        }
+
+        try (LogTailer<KeyValueMessage> tailer = manager.createTailer(GROUP, logName, codec1)) {
+            assertEquals(msg1, tailer.read(DEF_TIMEOUT).message());
+        }
+
+        // but it is possible to request an appender without knowing its codec
+        LogAppender<KeyValueMessage> appender3 = manager.getAppender(logName);
+        assertEquals(codec1, appender3.getCodec());
     }
 
     protected String readKey(LogTailer<KeyValueMessage> tailer) throws InterruptedException {

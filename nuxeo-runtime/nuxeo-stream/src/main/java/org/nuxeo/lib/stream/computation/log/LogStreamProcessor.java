@@ -163,7 +163,7 @@ public class LogStreamProcessor implements StreamProcessor {
         return topology.metadataList()
                        .stream()
                        .map(meta -> new ComputationPool(topology.getSupplier(meta.name()), meta,
-                               getDefaultAssignments(meta), manager))
+                               getDefaultAssignments(meta), manager, settings.getCodec(meta.name())))
                        .collect(Collectors.toList());
     }
 

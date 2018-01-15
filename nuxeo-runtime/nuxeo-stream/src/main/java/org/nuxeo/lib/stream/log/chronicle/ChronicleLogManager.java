@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -143,6 +144,10 @@ public class ChronicleLogManager extends AbstractLogManager {
 
     @Override
     public List<LogLag> getLagPerPartition(String name, String group) {
+        if (! appenders.containsKey(name)) {
+            // we don't want to create an appender while monitoring
+            return Collections.emptyList();
+        }
         int size = getAppender(name).size();
         List<LogLag> ret = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
@@ -196,7 +201,7 @@ public class ChronicleLogManager extends AbstractLogManager {
             Codec<M> codec) {
         Collection<ChronicleLogTailer<M>> pTailers = new ArrayList<>(partitions.size());
         partitions.forEach(partition -> pTailers.add(
-                (ChronicleLogTailer<M>) ((ChronicleLogAppender<M>) getAppender(partition.name())).createTailer(
+                (ChronicleLogTailer<M>) ((ChronicleLogAppender<M>) getAppender(partition.name(), codec)).createTailer(
                         partition, group, codec)));
         if (pTailers.size() == 1) {
             return pTailers.iterator().next();

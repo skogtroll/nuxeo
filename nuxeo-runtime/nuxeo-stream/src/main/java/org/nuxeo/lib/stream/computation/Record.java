@@ -53,7 +53,8 @@ public class Record implements Externalizable {
 
     protected String key;
 
-    protected byte[] data;
+    // We can not use null because Nullable on byte[] requires avro 1.7.6 cf AVRO-1401
+    protected byte[] data = new byte[0];
 
     public Record() {
         // Empty constructor required for deserialization
@@ -65,7 +66,7 @@ public class Record implements Externalizable {
 
     public Record(String key, byte[] data, long watermark, EnumSet<Flag> flags) {
         this.key = key;
-        this.data = data;
+        setData(data);
         this.watermark = watermark;
         setFlags(flags);
     }
@@ -103,14 +104,18 @@ public class Record implements Externalizable {
     }
 
     public void setData(byte[] data) {
-        this.data = data;
+        if (data != null) {
+            this.data = data;
+        } else {
+            this.data = new byte[0];
+        }
     }
 
     @Override
     public String toString() {
         String overview = "";
         String wmDate = "";
-        if (data != null) {
+        if (data != null && data.length > 0) {
             try {
                 overview = ", data=\"" + new String(data, "UTF-8").substring(0, min(data.length, 127)) + '"';
             } catch (UnsupportedEncodingException e) {
@@ -149,7 +154,7 @@ public class Record implements Externalizable {
         this.key = (String) in.readObject();
         int dataLength = in.readInt();
         if (dataLength == 0) {
-            this.data = null;
+            this.data = new byte[0];
         } else {
             this.data = new byte[dataLength];
             // not using in.readFully because it is not impl by Chronicle WireObjectInput

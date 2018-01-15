@@ -162,6 +162,11 @@ public class KafkaLogAppender<M extends Externalizable> implements CloseableLogA
         return closed;
     }
 
+    @Override
+    public Codec<M> getCodec() {
+        return codec;
+    }
+
     protected boolean isProcessed(String group, TopicPartition topicPartition, long offset) {
         // TODO: find a better way, this is expensive to create a consumer each time
         // but this is needed, an open consumer is not properly updated
