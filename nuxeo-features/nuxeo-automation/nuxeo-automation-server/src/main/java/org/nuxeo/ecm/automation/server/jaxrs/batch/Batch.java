@@ -54,15 +54,29 @@ public class Batch {
 
     protected String key;
 
+    protected String provider;
+
     protected Map<String, Serializable> fileEntries;
+
+    protected BatchHandler handler;
 
     public Batch(String key) {
         this(key, new HashMap<>());
     }
 
     public Batch(String key, Map<String, Serializable> fileEntries) {
+        this(null, key, fileEntries);
+    }
+
+    public Batch(String provider, String key, Map<String, Serializable> fileEntries) {
+        this.provider = provider;
         this.key = key;
         this.fileEntries = fileEntries;
+    }
+
+    public Batch(String provider, String key, Map<String, Serializable> fileEntries, BatchHandler handler) {
+        this(provider, key, fileEntries);
+        this.handler = handler;
     }
 
     public String getKey() {
@@ -73,7 +87,7 @@ public class Batch {
      * Returns the uploaded blobs in the order the user chose to upload them.
      */
     public List<Blob> getBlobs() {
-        List<Blob> blobs = new ArrayList<Blob>();
+        List<Blob> blobs = new ArrayList<>();
         List<String> sortedFileIndexes = getOrderedFileIndexes();
         log.debug(String.format("Retrieving blobs for batch %s: %s", key, sortedFileIndexes));
         for (String index : sortedFileIndexes) {
@@ -91,13 +105,8 @@ public class Batch {
     }
 
     protected List<String> getOrderedFileIndexes() {
-        List<String> sortedFileIndexes = new ArrayList<String>(fileEntries.keySet());
-        Collections.sort(sortedFileIndexes, new Comparator<String>() {
-            @Override
-            public int compare(String o1, String o2) {
-                return Integer.valueOf(o1).compareTo(Integer.valueOf(o2));
-            }
-        });
+        List<String> sortedFileIndexes = new ArrayList<>(fileEntries.keySet());
+        sortedFileIndexes.sort(Comparator.comparing(Integer::valueOf));
         return sortedFileIndexes;
     }
 
@@ -258,5 +267,16 @@ public class Batch {
         BatchManager bm = Framework.getService(BatchManager.class);
         TransientStore ts = bm.getTransientStore();
         return removeFileEntry(index, ts);
+    }
+
+    /**
+     * @since 10.1
+     */
+    public String getProvider() {
+        return provider;
+    }
+
+    public BatchHandler getHandler() {
+        return handler;
     }
 }

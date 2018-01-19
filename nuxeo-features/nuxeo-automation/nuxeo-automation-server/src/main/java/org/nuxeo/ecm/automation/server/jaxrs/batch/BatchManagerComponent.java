@@ -20,17 +20,6 @@
  */
 package org.nuxeo.ecm.automation.server.jaxrs.batch;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Serializable;
-import java.security.Principal;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,6 +30,7 @@ import org.nuxeo.ecm.automation.core.util.BlobList;
 import org.nuxeo.ecm.automation.core.util.ComplexTypeJSONDecoder;
 import org.nuxeo.ecm.automation.server.AutomationServer;
 import org.nuxeo.ecm.automation.server.RestBinding;
+import org.nuxeo.ecm.automation.server.jaxrs.batch.handler.BatchHandlerDescriptor;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.NuxeoException;
@@ -49,8 +39,20 @@ import org.nuxeo.ecm.core.transientstore.api.TransientStore;
 import org.nuxeo.ecm.core.transientstore.api.TransientStoreService;
 import org.nuxeo.ecm.webengine.model.exceptions.WebSecurityException;
 import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.runtime.model.ComponentContext;
+import org.nuxeo.runtime.model.ComponentInstance;
 import org.nuxeo.runtime.model.DefaultComponent;
-import org.nuxeo.runtime.services.config.ConfigurationService;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.Principal;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Runtime Component implementing the {@link BatchManager} service with the {@link TransientStore}.
@@ -64,6 +66,12 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
     protected static final String TRANSIENT_STORE_NAME = "BatchManagerCache";
 
     protected static final String CLIENT_BATCH_ID_FLAG = "allowClientGeneratedBatchId";
+
+    public static final String DEFAULT_PROVIDER = "default";
+
+    public static final String EP_BATCH_HANDLER = "batchHandlers";
+
+    private Map<String, BatchHandler> handlers;
 
     protected final AtomicInteger uploadInProgress = new AtomicInteger(0);
 
@@ -79,50 +87,78 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
 
     @Override
     public String initBatch() {
-        Batch batch = initBatchInternal(null);
-        return batch.getKey();
+        return initBatch(DEFAULT_PROVIDER);
+    }
+
+    public String initBatch(String providerName) {
+        BatchHandler batchHandler = handlers.get(providerName);
+        return batchHandler.newBatch().getKey();
     }
 
     @Override
     @Deprecated
     public String initBatch(String batchId, String contextName) {
-        Batch batch = initBatchInternal(batchId);
+        Batch batch = handlers.get(DEFAULT_PROVIDER).newBatch(batchId);
         return batch.getKey();
     }
 
-    protected Batch initBatchInternal(String batchId) {
+    protected Batch initBatchInternal(String providerId, String batchId) {
+        BatchHandler batchHandler = handlers.get(providerId);
         if (StringUtils.isEmpty(batchId)) {
-            batchId = "batchId-" + UUID.randomUUID().toString();
-        } else if (!Framework.getService(ConfigurationService.class).isBooleanPropertyTrue(CLIENT_BATCH_ID_FLAG)) {
-            throw new NuxeoException(String.format(
-                    "Cannot initialize upload batch with a given id since configuration property %s is not set to true",
-                    CLIENT_BATCH_ID_FLAG));
+            return batchHandler.newBatch();
         }
 
-        // That's the way of storing an empty entry
-        log.debug("Initializing batch with id " + batchId);
-        getTransientStore().setCompleted(batchId, false);
-        return new Batch(batchId);
+        return batchHandler.newBatch(batchId);
     }
 
+//    protected Batch initBatchInternal(String batchId, String providerId) {
+//
+//        if (StringUtils.isEmpty(batchId)) {
+//            batchId = "batchId-" + UUID.randomUUID().toString();
+//        } else if (!Framework.getService(ConfigurationService.class).isBooleanPropertyTrue(CLIENT_BATCH_ID_FLAG)) {
+//            throw new NuxeoException(String.format(
+//                    "Cannot initialize upload batch with a given id since configuration property %s is not set to true",
+//                    CLIENT_BATCH_ID_FLAG));
+//        }
+//
+//        if (StringUtils.isEmpty(providerId)) {
+//            providerId = DEFAULT_PROVIDER;
+//        }
+//
+//        // That's the way of storing an empty entry
+//        log.debug("Initializing batch with id " + batchId);
+//        getTransientStore().setCompleted(batchId, false);
+//        getTransientStore().putParameter(batchId, "provider", providerId);
+//        return new Batch(batchId);
+//    }
+
     public Batch getBatch(String batchId) {
-        Map<String, Serializable> batchEntryParams = getTransientStore().getParameters(batchId);
-        if (batchEntryParams == null) {
-            if (!hasBatch(batchId)) {
-                return null;
-            }
-            batchEntryParams = new HashMap<>();
-        }
-        return new Batch(batchId, batchEntryParams);
+        Optional<Batch> batch = handlers.values()
+                                        .stream()
+                                        .map(batchHandler -> batchHandler.getBatch(batchId))
+                                        .findFirst();
+
+        return batch.orElse(null);
+    }
+
+    public Batch getBatch(String batchId, String providerId) {
+        return handlers.get(providerId).getBatch(batchId);
     }
 
     @Override
     public void addStream(String batchId, String index, InputStream is, String name, String mime) throws IOException {
+        addStream(null, batchId, index, is, name, mime);
+    }
+
+    public void addStream(String provider, String batchId, String index, InputStream is, String name, String mime) throws IOException {
+        if (StringUtils.isEmpty(provider)) {
+            provider = DEFAULT_PROVIDER;
+        }
         uploadInProgress.incrementAndGet();
         try {
-            Batch batch = getBatch(batchId);
+            Batch batch = getBatch(batchId, provider);
             if (batch == null) {
-                batch = initBatchInternal(batchId);
+                batch = initBatchInternal(provider, batchId);
             }
             batch.addFile(index, is, name, mime);
             log.debug(String.format("Added file %s [%s] to batch %s", index, name, batch.getKey()));
@@ -134,11 +170,19 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
     @Override
     public void addStream(String batchId, String index, InputStream is, int chunkCount, int chunkIndex, String name,
             String mime, long fileSize) throws IOException {
+        addStreamChunk(null, batchId, index, is, chunkCount, chunkIndex, name, mime, fileSize);
+    }
+
+    public void addStreamChunk(String provider, String batchId, String index, InputStream is, int chunkCount, int chunkIndex, String name,
+            String mime, long fileSize) throws IOException {
+        if (StringUtils.isEmpty(provider)) {
+            provider = DEFAULT_PROVIDER;
+        }
         uploadInProgress.incrementAndGet();
         try {
-            Batch batch = getBatch(batchId);
+            Batch batch = getBatch(batchId, provider);
             if (batch == null) {
-                batch = initBatchInternal(batchId);
+                batch = initBatchInternal(provider, batchId);
             }
             batch.addChunk(index, is, chunkCount, chunkIndex, name, mime, fileSize);
             log.debug(String.format("Added chunk %s to file %s [%s] in batch %s", chunkIndex, index, name,
@@ -148,9 +192,10 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
         }
     }
 
+
     @Override
     public boolean hasBatch(String batchId) {
-        return batchId != null && getTransientStore().exists(batchId);
+        return handlers.values().stream().anyMatch(batchHandler -> batchHandler.getBatch(batchId) != null);
     }
 
     @Override
@@ -246,6 +291,7 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
     @Override
     public Object execute(String batchId, String chainOrOperationId, CoreSession session,
             Map<String, Object> contextParams, Map<String, Object> operationParams) {
+
         List<Blob> blobs = getBlobs(batchId, getUploadWaitTimeout());
         if (blobs == null) {
             String message = String.format("Unable to find batch associated with id '%s'", batchId);
@@ -279,7 +325,6 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
         }
 
         try (OperationContext ctx = new OperationContext(session)) {
-
             AutomationServer server = Framework.getService(AutomationServer.class);
             RestBinding binding = server.getOperationBinding(chainOrOperationId);
 
@@ -327,9 +372,48 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
     @Override
     public boolean removeFileEntry(String batchId, String filedIdx) {
         Batch batch = getBatch(batchId);
-        if (batch == null) {
-            return false;
+        return batch != null && batch.removeFileEntry(filedIdx, getTransientStore());
+    }
+
+    @Override public void activate(ComponentContext context) {
+
+        handlers = new LinkedHashMap<>();
+        super.activate(context);
+    }
+
+    @Override public void deactivate(ComponentContext context) {
+        handlers = null;
+        super.deactivate(context);
+    }
+
+    @Override public void registerContribution(Object contribution, String extensionPoint,
+            ComponentInstance contributor) {
+        if (EP_BATCH_HANDLER.equalsIgnoreCase(extensionPoint)) {
+            if (BatchHandlerDescriptor.class.isAssignableFrom(contribution.getClass())) {
+                BatchHandlerDescriptor contributionDescriptor = (BatchHandlerDescriptor) contribution;
+                BatchHandler batchHandler = newInstance(contributionDescriptor.getKlass());
+                batchHandler.init(contributionDescriptor.getProperties());
+                handlers.put(contributionDescriptor.getName(), batchHandler);
+
+            }
         }
-        return batch.removeFileEntry(filedIdx, getTransientStore());
+    }
+
+    @Override public void unregisterContribution(Object contribution, String extensionPoint,
+            ComponentInstance contributor) {
+        if (EP_BATCH_HANDLER.equalsIgnoreCase(extensionPoint)) {
+            if (BatchHandlerDescriptor.class.isAssignableFrom(contribution.getClass())) {
+                BatchHandlerDescriptor contributionDescriptor = (BatchHandlerDescriptor) contribution;
+                handlers.remove(contributionDescriptor.getName());
+            }
+        }
+    }
+
+    protected <T> T newInstance(Class<T> klass) {
+        try {
+            return klass.newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
