@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -60,6 +61,8 @@ public class Batch {
 
     protected BatchHandler handler;
 
+    protected Map<String, Object> extraInfo;
+
     public Batch(String key) {
         this(key, new HashMap<>());
     }
@@ -72,6 +75,7 @@ public class Batch {
         this.provider = provider;
         this.key = key;
         this.fileEntries = fileEntries;
+        this.extraInfo = new LinkedHashMap<>();
     }
 
     public Batch(String provider, String key, Map<String, Serializable> fileEntries, BatchHandler handler) {
@@ -279,4 +283,6 @@ public class Batch {
     public BatchHandler getHandler() {
         return handler;
     }
+
+    public Map<String, Object> getBatchExtraInfo() { return extraInfo; }
 }
