@@ -51,8 +51,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Runtime Component implementing the {@link BatchManager} service with the {@link TransientStore}.
@@ -65,11 +67,11 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
 
     protected static final String TRANSIENT_STORE_NAME = "BatchManagerCache";
 
-    protected static final String CLIENT_BATCH_ID_FLAG = "allowClientGeneratedBatchId";
+    public static final String CLIENT_BATCH_ID_FLAG = "allowClientGeneratedBatchId";
 
     public static final String DEFAULT_PROVIDER = "default";
 
-    public static final String EP_BATCH_HANDLER = "batchHandlers";
+    public static final String EP_BATCH_HANDLER = "handlers";
 
     private Map<String, BatchHandler> handlers;
 
@@ -87,12 +89,20 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
 
     @Override
     public String initBatch() {
-        return initBatch(DEFAULT_PROVIDER);
+        return initBatch(DEFAULT_PROVIDER).getKey();
     }
 
-    public String initBatch(String providerName) {
+    public Batch initBatch(String providerName) {
         BatchHandler batchHandler = handlers.get(providerName);
-        return batchHandler.newBatch().getKey();
+        return batchHandler.newBatch();
+    }
+
+    @Override public Map<String, BatchHandler> getSupportedHandlers() {
+        return Collections.unmodifiableMap(handlers);
+    }
+
+    @Override public BatchHandler getHandlerByName(String name) {
+        return handlers.get(name);
     }
 
     @Override
@@ -103,6 +113,9 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
     }
 
     protected Batch initBatchInternal(String providerId, String batchId) {
+        if (StringUtils.isEmpty(providerId)) {
+            providerId = DEFAULT_PROVIDER;
+        }
         BatchHandler batchHandler = handlers.get(providerId);
         if (StringUtils.isEmpty(batchId)) {
             return batchHandler.newBatch();
@@ -111,33 +124,13 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
         return batchHandler.newBatch(batchId);
     }
 
-//    protected Batch initBatchInternal(String batchId, String providerId) {
-//
-//        if (StringUtils.isEmpty(batchId)) {
-//            batchId = "batchId-" + UUID.randomUUID().toString();
-//        } else if (!Framework.getService(ConfigurationService.class).isBooleanPropertyTrue(CLIENT_BATCH_ID_FLAG)) {
-//            throw new NuxeoException(String.format(
-//                    "Cannot initialize upload batch with a given id since configuration property %s is not set to true",
-//                    CLIENT_BATCH_ID_FLAG));
-//        }
-//
-//        if (StringUtils.isEmpty(providerId)) {
-//            providerId = DEFAULT_PROVIDER;
-//        }
-//
-//        // That's the way of storing an empty entry
-//        log.debug("Initializing batch with id " + batchId);
-//        getTransientStore().setCompleted(batchId, false);
-//        getTransientStore().putParameter(batchId, "provider", providerId);
-//        return new Batch(batchId);
-//    }
-
+    @Override
     public Batch getBatch(String batchId) {
         Optional<Batch> batch = handlers.values()
                                         .stream()
                                         .map(batchHandler -> batchHandler.getBatch(batchId))
+                                        .filter(Objects::nonNull)
                                         .findFirst();
-
         return batch.orElse(null);
     }
 
@@ -394,7 +387,6 @@ public class BatchManagerComponent extends DefaultComponent implements BatchMana
                 BatchHandler batchHandler = newInstance(contributionDescriptor.getKlass());
                 batchHandler.init(contributionDescriptor.getProperties());
                 handlers.put(contributionDescriptor.getName(), batchHandler);
-
             }
         }
     }
