@@ -24,6 +24,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +32,7 @@ import javax.mail.MessagingException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -54,6 +56,8 @@ import org.nuxeo.ecm.automation.server.jaxrs.ResponseHelper;
 import org.nuxeo.ecm.automation.server.jaxrs.batch.BatchFileEntry;
 import org.nuxeo.ecm.automation.server.jaxrs.batch.BatchManager;
 import org.nuxeo.ecm.automation.server.jaxrs.batch.BatchManagerConstants;
+import org.nuxeo.ecm.automation.server.jaxrs.batch.BatchUploadProvider;
+import org.nuxeo.ecm.automation.server.jaxrs.batch.BatchUploadProviderService;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.NuxeoException;
@@ -102,6 +106,49 @@ public class BatchUploadObject extends AbstractResource<ResourceTypeImpl> {
     public static final String UPLOAD_TYPE_NORMAL = "normal";
 
     public static final String UPLOAD_TYPE_CHUNKED = "chunked";
+
+    private BatchUploadProviderService batchUploadProviderService;
+    private BatchManager batchManager;
+
+
+    @Override protected void initialize(Object... args) {
+        super.initialize(args);
+        batchUploadProviderService = Framework.getService(BatchUploadProviderService.class);
+        batchManager = Framework.getService(BatchManager.class);
+    }
+
+    @GET
+    @Path("providers")
+    public Response providers() {
+        List<BatchUploadProvider> providers = batchUploadProviderService.getProviders();
+        return Response.ok(providers).build();
+    }
+
+    @GET
+    @Path("providers/{providerId}")
+    public Response getProviderInfo(@PathParam("providerId") String providerId) {
+        BatchUploadProvider provider = batchUploadProviderService.getProviderByName(providerId);
+        return Response.ok(provider).build();
+    }
+
+    @POST
+    @Path("new/{providerId}")
+    public Response createNewBatch(@PathParam("providerId") String providerId) throws IOException {
+        if (StringUtils.isEmpty(providerId)) {
+            return initBatch();
+        }
+
+        BatchUploadProvider provider = batchUploadProviderService.getProviderByName(providerId);
+
+        if (provider == null) {
+            return Response.status(Status.NOT_FOUND).build();
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        return buildResponse(Status.CREATED, result);
+
+    }
 
     @POST
     public Response initBatch() throws IOException {
