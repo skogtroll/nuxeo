@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.common.utils.Path;
+import org.nuxeo.ecm.automation.core.operations.document.TrashManagementService;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.DocumentModelList;
@@ -232,6 +233,12 @@ public class TrashServiceImpl extends DefaultComponent implements TrashService {
             return;
         }
         CoreSession session = docs.get(0).getCoreSession();
+        if (!Framework.getService(TrashManagementService.class).isTrashManagementEnabled()) {
+            for (DocumentModel doc : docs) {
+                session.removeDocument(doc.getRef());
+            }
+            return;
+        }
         for (DocumentModel doc : docs) {
             DocumentRef docRef = doc.getRef();
             if (session.getAllowedStateTransitions(docRef).contains(LifeCycleConstants.DELETE_TRANSITION)
