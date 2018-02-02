@@ -17,6 +17,8 @@
  *     jcarsique
  */
 
+@Library('nuxeo@feature-NXP-23884-pipelines-on-it-builds') _
+
 def nodelabel = getBinding().hasVariable("NODELABEL")?NODELABEL:'SLAVE'
 def zipfilter = getBinding().hasVariable("ZIPFILTER")?ZIPFILTER:'nuxeo-server-tomcat-*.zip'
 
