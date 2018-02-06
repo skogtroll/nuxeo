@@ -23,11 +23,11 @@ package org.nuxeo.launcher;
 import java.io.Console;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -707,8 +707,7 @@ public abstract class NuxeoLauncher {
 
     private ProcessManager getOSProcessManager() {
         if (SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_AIX) {
-            UnixProcessManager unixProcessManager = new UnixProcessManager();
-            return unixProcessManager;
+            return new UnixProcessManager();
         } else if (SystemUtils.IS_OS_MAC) {
             return new MacProcessManager();
         } else if (SystemUtils.IS_OS_SUN_OS) {
@@ -740,9 +739,7 @@ public abstract class NuxeoLauncher {
         startCommand.addAll(getNuxeoProperties());
         startCommand.addAll(getServerProperties());
         setServerStartCommand(startCommand);
-        for (String param : params) {
-            startCommand.add(param);
-        }
+        startCommand.addAll(Arrays.asList(params));
         ProcessBuilder pb = new ProcessBuilder(getOSCommand(startCommand));
         pb.directory(configurationGenerator.getNuxeoHome());
         log.debug("Server command: " + pb.command());
@@ -812,7 +809,8 @@ public abstract class NuxeoLauncher {
      */
     public ArrayList<ThreadedStreamGobbler> logProcessStreams(Process process, boolean logProcessOutput) {
         ArrayList<ThreadedStreamGobbler> sgArray = new ArrayList<>();
-        ThreadedStreamGobbler inputSG, errorSG;
+        ThreadedStreamGobbler inputSG;
+        ThreadedStreamGobbler errorSG;
         if (logProcessOutput) {
             inputSG = new ThreadedStreamGobbler(process.getInputStream(), System.out);
             errorSG = new ThreadedStreamGobbler(process.getErrorStream(), System.err);
@@ -843,7 +841,7 @@ public abstract class NuxeoLauncher {
         if (SystemUtils.IS_OS_WINDOWS) {
             return getWindowsCommand(roughCommand);
         }
-        throw new IllegalStateException("Unkown os, can't launch server");
+        throw new IllegalStateException("Unknown os, can't launch server");
     }
 
     private List<String> getWindowsCommand(List<String> roughCommand) {
@@ -859,7 +857,7 @@ public abstract class NuxeoLauncher {
 
     private List<String> getUnixCommand(List<String> roughCommand) {
         ArrayList<String> osCommand = new ArrayList<>();
-        String linearizedCommand = new String();
+        StringBuilder linearizedCommand = new StringBuilder();
         for (String commandToken : roughCommand) {
             if (StringUtils.isBlank(commandToken)) {
                 continue;
@@ -867,21 +865,20 @@ public abstract class NuxeoLauncher {
             if (commandToken.contains(" ")) {
                 commandToken = commandToken.replaceAll(" ", "\\\\ ");
             }
-            linearizedCommand += " " + commandToken;
+            linearizedCommand.append(' ').append(commandToken);
         }
         osCommand.add("/bin/sh");
         osCommand.add("-c");
-        osCommand.add(linearizedCommand);
+        osCommand.add(linearizedCommand.toString());
         return osCommand;
     }
 
-    protected abstract Collection<? extends String> getServerProperties();
+    protected abstract Collection<String> getServerProperties();
 
     protected abstract void setServerStartCommand(List<String> command);
 
     private File getJavaExecutable() {
-        File javaExec = new File(System.getProperty("java.home"), "bin" + File.separator + "java");
-        return javaExec;
+        return new File(System.getProperty("java.home"), "bin" + File.separator + "java");
     }
 
     protected abstract String getClassPath();
@@ -891,7 +888,7 @@ public abstract class NuxeoLauncher {
      */
     protected abstract String getShutdownClassPath();
 
-    protected Collection<? extends String> getNuxeoProperties() {
+    protected Collection<String> getNuxeoProperties() {
         ArrayList<String> nuxeoProperties = new ArrayList<>();
         nuxeoProperties.add(String.format("-D%s=%s", Environment.NUXEO_HOME, configurationGenerator.getNuxeoHome()
                 .getPath()));
@@ -922,7 +919,7 @@ public abstract class NuxeoLauncher {
             classPathEntry = new File(filename);
         }
         if (!classPathEntry.exists()) {
-            throw new RuntimeException("Tried to add inexistent classpath entry: " + filename);
+            throw new RuntimeException("Tried to add nonexistent classpath entry: " + filename);
         }
         cp += System.getProperty("path.separator") + classPathEntry.getPath();
         return cp;
@@ -1159,22 +1156,19 @@ public abstract class NuxeoLauncher {
                 commandSucceeded = launcher.doStartAndWait();
             }
         } else if (launcher.commandIs("console")) {
-            launcher.executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    launcher.addShutdownHook();
-                    try {
-                        if (!launcher.doStart(true)) {
-                            launcher.removeShutdownHook();
-                            System.exit(1);
-                        } else if (!quiet) {
-                            log.info("Go to " + launcher.getURL());
-                        }
-                    } catch (PackageException e) {
-                        log.error("Could not initialize the packaging subsystem", e);
+            launcher.executor.execute(() -> {
+                launcher.addShutdownHook();
+                try {
+                    if (!launcher.doStart(true)) {
                         launcher.removeShutdownHook();
-                        System.exit(EXIT_CODE_ERROR);
+                        System.exit(1);
+                    } else if (!quiet) {
+                        log.info("Go to " + launcher.getURL());
                     }
+                } catch (PackageException e) {
+                    log.error("Could not initialize the packaging subsystem", e);
+                    launcher.removeShutdownHook();
+                    System.exit(EXIT_CODE_ERROR);
                 }
             });
         } else if (launcher.commandIs("stop")) {
@@ -1259,8 +1253,8 @@ public abstract class NuxeoLauncher {
         } else if (launcher.commandIs("register-trial")) {
             commandSucceeded = launcher.registerTrial();
         } else if (launcher.commandIs("connect-report")) {
-            boolean gzip = Boolean.valueOf(launcher.cmdLine.getOptionValue(OPTION_GZIP_OUTPUT, "true")).booleanValue();
-            boolean prettyprinting = Boolean.valueOf(launcher.cmdLine.getOptionValue(OPTION_PRETTY_PRINT, "false"));
+            boolean gzip = Boolean.parseBoolean(launcher.cmdLine.getOptionValue(OPTION_GZIP_OUTPUT, "true"));
+            boolean prettyprinting = Boolean.parseBoolean(launcher.cmdLine.getOptionValue(OPTION_PRETTY_PRINT, "false"));
             Path outputpath;
             if (launcher.cmdLine.hasOption(OPTION_OUTPUT)) {
                 outputpath = Paths.get(launcher.cmdLine.getOptionValue(OPTION_OUTPUT));
@@ -1352,7 +1346,7 @@ public abstract class NuxeoLauncher {
                 value = console.readLine(message);
             }
         } else { // try reading from stdin
-            value = IOUtils.toString(System.in);
+            value = IOUtils.toString(System.in, StandardCharsets.UTF_8);
             if (value == null || doRegexMatch && !predicate.test(value)) {
                 throw new ConfigurationException(error);
             }
@@ -1370,7 +1364,7 @@ public abstract class NuxeoLauncher {
         if (console != null) {
             return console.readPassword(message);
         } else { // try reading from stdin
-            return IOUtils.toCharArray(System.in);
+            return IOUtils.toCharArray(System.in, StandardCharsets.UTF_8);
         }
     }
 
@@ -1398,7 +1392,7 @@ public abstract class NuxeoLauncher {
         NuxeoClientInstanceType type;
         Console console = System.console();
         if (console == null) {
-            String typeStr = IOUtils.toString(System.in);
+            String typeStr = IOUtils.toString(System.in, StandardCharsets.UTF_8);
             type = NuxeoClientInstanceType.fromString(typeStr);
             if (type == null) {
                 throw new ConfigurationException("Unknown type: " + typeStr);
@@ -1437,7 +1431,7 @@ public abstract class NuxeoLauncher {
         String projectName;
         Console console = System.console();
         if (console == null) {
-            projectName = IOUtils.toString(System.in);
+            projectName = IOUtils.toString(System.in, StandardCharsets.UTF_8);
             ConnectProject project = getConnectRegistrationBroker().getProjectByName(projectName, projects);
             if (project == null) {
                 throw new ConfigurationException("Unknown project: " + projectName);
@@ -1554,7 +1548,7 @@ public abstract class NuxeoLauncher {
         if (params.length > 0) {
             username = params[0];
         } else {
-            username = prompt("Username: ", s -> StringUtils.isNotBlank(s), "Username cannot be empty.");
+            username = prompt("Username: ", StringUtils::isNotBlank, "Username cannot be empty.");
         }
         char[] password;
         if (params.length == 3 || params.length == 5) {
@@ -1790,7 +1784,7 @@ public abstract class NuxeoLauncher {
                         } else if (Environment.CRYPT_KEY.equals(key) || Environment.CRYPT_KEYSTORE_PASS.equals(key)) {
                             value = Base64.encodeBase64String(IOUtils.toByteArray(System.in));
                         } else {
-                            value = IOUtils.toString(System.in);
+                            value = IOUtils.toString(System.in, StandardCharsets.UTF_8);
                         }
                     } catch (IOException e) {
                         log.debug(e, e);
@@ -1835,9 +1829,7 @@ public abstract class NuxeoLauncher {
                 return false;
             }
             startCommand.add(configurationGenerator.getRuntimeHome().getPath());
-            for (String param : params) {
-                startCommand.add(param);
-            }
+            startCommand.addAll(Arrays.asList(params));
             ProcessBuilder pb = new ProcessBuilder(getOSCommand(startCommand));
             pb.directory(configurationGenerator.getNuxeoHome());
             log.debug("Pack command: " + pb.command());
@@ -1956,7 +1948,7 @@ public abstract class NuxeoLauncher {
         final StringBuilder startSummary = new StringBuilder();
         final String newLine = System.getProperty("line.separator");
         boolean isReady = false;
-        long deltaTime = 0;
+        long deltaTime;
         // Wait for status servlet ready
         do {
             try {
@@ -1968,7 +1960,6 @@ public abstract class NuxeoLauncher {
             }
             deltaTime = (new Date().getTime() - startTime) / 1000;
         } while (!isReady && deltaTime < startMaxWait && isRunning());
-        isReady = false;
         // Wait for effective start reported from status servlet
         do {
             isReady = isStarted();
@@ -1981,10 +1972,9 @@ public abstract class NuxeoLauncher {
             deltaTime = (new Date().getTime() - startTime) / 1000;
         } while (!isReady && deltaTime < startMaxWait && isRunning());
         if (isReady) {
-            startSummary.append(newLine + getStartupSummary());
+            startSummary.append(newLine).append(getStartupSummary());
             long duration = (new Date().getTime() - startTime) / 1000;
-            startSummary.append("Started in "
-                    + String.format("%dmin%02ds", new Long(duration / 60), new Long(duration % 60)));
+            startSummary.append(String.format("Started in %dmin%02ds", duration / 60, duration % 60));
             if (wasStartupFine()) {
                 if (!quiet) {
                     System.out.println(startSummary);
@@ -2059,11 +2049,11 @@ public abstract class NuxeoLauncher {
                     errorValue = EXIT_CODE_NOT_CONFIGURED;
                     return false;
                 }
-                String paramsStr = "";
+                StringBuilder paramsStr = new StringBuilder();
                 for (String param : params) {
-                    paramsStr += " " + param;
+                    paramsStr.append(' ').append(param);
                 }
-                System.setProperty(ConfigurationGenerator.PARAM_WIZARD_RESTART_PARAMS, paramsStr);
+                System.setProperty(ConfigurationGenerator.PARAM_WIZARD_RESTART_PARAMS, paramsStr.toString());
                 configurationGenerator.prepareWizardStart();
             } else {
                 configurationGenerator.cleanupPostWizard();
@@ -2190,10 +2180,11 @@ public abstract class NuxeoLauncher {
      */
     protected String getClassPath(String classpath, File baseDir) throws IOException {
         File[] files = getFilename(baseDir, ".*");
+        StringBuilder sb = new StringBuilder(classpath);
         for (File file : files) {
-            classpath += System.getProperty("path.separator") + file.getPath();
+            sb.append(System.getProperty("path.separator")).append(file.getPath());
         }
-        return classpath;
+        return sb.toString();
     }
 
     /**
@@ -2201,13 +2192,7 @@ public abstract class NuxeoLauncher {
      * @return filename matching filePattern in baseDir
      */
     protected File[] getFilename(File baseDir, final String filePattern) {
-        File[] files = baseDir.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File basedir, String filename) {
-                return filename.matches(filePattern + "(-[0-9].*)?\\.jar");
-            }
-        });
-        return files;
+        return baseDir.listFiles((basedir, filename) -> filename.matches(filePattern + "(-[0-9].*)?\\.jar"));
     }
 
     protected class ShutdownThread extends Thread {
@@ -2262,12 +2247,9 @@ public abstract class NuxeoLauncher {
                 stopCommand.addAll(getNuxeoProperties());
                 stopCommand.addAll(getServerProperties());
                 setServerStopCommand(stopCommand);
-                for (String param : params) {
-                    stopCommand.add(param);
-                }
+                stopCommand.addAll(Arrays.asList(params));
                 ProcessBuilder pb = new ProcessBuilder(getOSCommand(stopCommand));
                 pb.directory(configurationGenerator.getNuxeoHome());
-                // pb = pb.redirectErrorStream(true);
                 log.debug("Server command: " + pb.command());
                 try {
                     Process stopProcess = pb.start();
@@ -2304,7 +2286,6 @@ public abstract class NuxeoLauncher {
                         return;
                     }
                     // Wait a few seconds for effective stop
-                    deltaTime = 0;
                     do {
                         if (!quiet) {
                             System.out.print(".");
@@ -2450,7 +2431,7 @@ public abstract class NuxeoLauncher {
         // Use GUI?
         if (cmdLine.hasOption(OPTION_GUI)) {
             useGui = Boolean.valueOf(ConnectBroker.parseAnswer(cmdLine.getOptionValue(OPTION_GUI)));
-            log.debug("GUI: " + cmdLine.getOptionValue(OPTION_GUI) + " -> " + new Boolean(useGui).toString());
+            log.debug("GUI: " + cmdLine.getOptionValue(OPTION_GUI) + " -> " + useGui);
         } else if (OPTION_GUI.equalsIgnoreCase(command)) {
             useGui = true;
             // Shift params and extract command if there is one

@@ -118,9 +118,6 @@ public class LogsSource extends Observable implements Runnable {
         }
     }
 
-    /**
-     * @param length
-     */
     public void skip(long length) {
         charsToSkip = length;
     }

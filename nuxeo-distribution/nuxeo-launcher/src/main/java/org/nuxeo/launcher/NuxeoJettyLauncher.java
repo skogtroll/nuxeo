@@ -36,9 +36,6 @@ import org.nuxeo.launcher.config.JettyConfigurator;
  */
 public class NuxeoJettyLauncher extends NuxeoLauncher {
 
-    /**
-     * @param configurationGenerator
-     */
     public NuxeoJettyLauncher(ConfigurationGenerator configurationGenerator) {
         super(configurationGenerator);
         throw new UnsupportedOperationException();
@@ -67,9 +64,8 @@ public class NuxeoJettyLauncher extends NuxeoLauncher {
     }
 
     @Override
-    protected Collection<? extends String> getServerProperties() {
-        ArrayList<String> serverProperties = new ArrayList<>();
-        return serverProperties;
+    protected Collection<String> getServerProperties() {
+        return new ArrayList<>();
     }
 
     @Override
