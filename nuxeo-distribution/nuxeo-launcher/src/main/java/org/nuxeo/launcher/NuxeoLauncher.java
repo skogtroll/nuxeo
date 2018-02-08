@@ -2090,7 +2090,13 @@ public abstract class NuxeoLauncher {
             }
 
             start(logProcessOutput);
-            serverStarted = isRunning();
+            if (strict) {
+                addShutdownHook();
+                serverStarted = waitForEffectiveStart() && isRunning();
+                removeShutdownHook();
+            } else {
+                serverStarted = isRunning();
+            }
             if (pid != null) {
                 File pidFile = new File(configurationGenerator.getPidDir(), "nuxeo.pid");
                 try (FileWriter writer = new FileWriter(pidFile)) {
