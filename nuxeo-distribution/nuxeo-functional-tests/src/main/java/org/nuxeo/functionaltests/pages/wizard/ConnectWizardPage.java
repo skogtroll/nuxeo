@@ -37,7 +37,7 @@ public class ConnectWizardPage extends AbstractWizardPage {
 
     @Override
     public String getTitle() {
-        WebElement title = findElementWithTimeout(By.xpath("//h3"));
+        WebElement title = findElementWithTimeout(By.xpath("//header//div[@class='label']"));
         return title.getText().trim();
     }
 
