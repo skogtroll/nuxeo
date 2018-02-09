@@ -61,8 +61,8 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
         "org.nuxeo.ecm.platform.usermanager.api", //
         "org.nuxeo.ecm.platform.usermanager", //
 })
-@Deploy({ "org.nuxeo.ecm.platform.usermanager.tests:computedgroups-contrib.xml", //
-        "org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/directory-config.xml", //
+@Deploy({ "org.nuxeo.ecm.automation.features.tests:computedgroups-contrib.xml", //
+        "org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/directory-config.xml", //
 })
 public class TestComputedGroupService {
 
@@ -166,7 +166,7 @@ public class TestComputedGroupService {
     }
 
     @Test
-    @Deploy("org.nuxeo.ecm.platform.usermanager.tests:companycomputedgroups-contrib.xml")
+    @Deploy("org.nuxeo.ecm.automation.features.tests:companycomputedgroups-contrib.xml")
     public void testCompanyComputer() throws Exception {
         dotTestCompanyComputer();
     }

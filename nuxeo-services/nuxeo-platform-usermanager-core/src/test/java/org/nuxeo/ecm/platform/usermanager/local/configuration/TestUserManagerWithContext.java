@@ -54,7 +54,7 @@ import org.nuxeo.runtime.test.runner.Deploy;
  * @author Benjamin JALON
  */
 @Deploy("org.nuxeo.ecm.directory.multi")
-@Deploy("org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl-multitenant/directory-for-context-config.xml")
+@Deploy("org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl-multitenant/directory-for-context-config.xml")
 public class TestUserManagerWithContext extends UserManagerTestCase {
 
     protected Mockery mockery = new JUnit4Mockery();

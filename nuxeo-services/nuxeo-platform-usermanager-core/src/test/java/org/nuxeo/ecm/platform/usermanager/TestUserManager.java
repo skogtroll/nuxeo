@@ -70,7 +70,7 @@ import org.nuxeo.runtime.test.runner.RuntimeHarness;
  * @author Florent Guillaume
  * @author Anahide Tchertchian
  */
-@Deploy("org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/directory-config.xml")
+@Deploy("org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/directory-config.xml")
 public class TestUserManager extends UserManagerTestCase {
 
     @Inject
@@ -120,7 +120,7 @@ public class TestUserManager extends UserManagerTestCase {
     }
 
     @Test
-    @Deploy("org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/userservice-override-config.xml")
+    @Deploy("org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/userservice-override-config.xml")
     public void testGetAdministratorOverride() throws Exception {
         // user manager is recomputed after deployment => refetch it
         userManager = Framework.getService(UserManager.class);
@@ -184,7 +184,7 @@ public class TestUserManager extends UserManagerTestCase {
     }
 
     @Test
-    @Deploy("org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/userservice-override-config.xml")
+    @Deploy("org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/userservice-override-config.xml")
     public void testGetVirtualUsersOverride() throws Exception {
         doTestGetVirtualUsersOverride();
     }
@@ -234,7 +234,7 @@ public class TestUserManager extends UserManagerTestCase {
     }
 
     @Test
-    @Deploy("org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/userservice-override-config.xml")
+    @Deploy("org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/userservice-override-config.xml")
     public void testGetAdministratorGroupsOverride() throws Exception {
         doTestGetAdministratorGroupsOverride();
     }

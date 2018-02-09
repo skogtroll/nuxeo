@@ -46,7 +46,7 @@ import org.nuxeo.runtime.test.runner.Deploy;
  * @author bjalon
  */
 @Deploy("org.nuxeo.ecm.directory.multi")
-@Deploy("org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl-multitenant/directory-for-context-config.xml")
+@Deploy("org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl-multitenant/directory-for-context-config.xml")
 public class TestUserManagerImplFilterTranformerForDirectoryLocalConfigManagement extends UserManagerTestCase {
 
     protected UserMultiTenantManagement umtm;

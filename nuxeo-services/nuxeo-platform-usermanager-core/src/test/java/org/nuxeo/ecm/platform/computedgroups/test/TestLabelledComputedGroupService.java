@@ -44,8 +44,8 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
         "org.nuxeo.ecm.platform.usermanager.api", //
         "org.nuxeo.ecm.platform.usermanager", //
 })
-@Deploy({ "org.nuxeo.ecm.platform.usermanager.tests:labelled-computedgroups-framework.xml", //
-        "org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/directory-config.xml", //
+@Deploy({ "org.nuxeo.ecm.automation.features.tests:labelled-computedgroups-framework.xml", //
+        "org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/directory-config.xml", //
 })
 public class TestLabelledComputedGroupService {
 

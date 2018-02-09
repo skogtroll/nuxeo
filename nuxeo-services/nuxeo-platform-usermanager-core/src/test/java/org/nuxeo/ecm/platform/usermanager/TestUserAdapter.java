@@ -32,7 +32,7 @@ import org.nuxeo.runtime.test.runner.Deploy;
 /**
  * @author Thierry Martins
  */
-@Deploy("org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/directory-config.xml")
+@Deploy("org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/directory-config.xml")
 public class TestUserAdapter extends UserManagerTestCase {
 
     @Test

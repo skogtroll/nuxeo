@@ -39,7 +39,7 @@ import org.nuxeo.ecm.platform.query.api.PageProviderService;
 import org.nuxeo.ecm.platform.usermanager.UserManagerTestCase;
 import org.nuxeo.runtime.test.runner.Deploy;
 
-@Deploy("org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/directory-config.xml")
+@Deploy("org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/directory-config.xml")
 public class TestUsersPageProvider extends UserManagerTestCase {
 
     protected static final String PROVIDER_NAME = "users_listing";

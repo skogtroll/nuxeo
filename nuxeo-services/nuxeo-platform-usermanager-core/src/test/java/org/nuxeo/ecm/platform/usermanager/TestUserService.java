@@ -127,7 +127,7 @@ public class TestUserService extends NXRuntimeTestCase {
 
     @Test
     public void testOverride() throws Exception {
-        pushInlineDeployments("org.nuxeo.ecm.platform.usermanager.tests:test-userservice-override-config.xml");
+        pushInlineDeployments("org.nuxeo.ecm.automation.features.tests:test-userservice-override-config.xml");
         FakeUserManagerImpl fum = (FakeUserManagerImpl) userManager;
         assertEquals(Arrays.asList("tehroot", "bob", "bobette"), fum.defaultAdministratorIds);
         assertEquals(Arrays.asList("myAdministrators"), fum.administratorsGroups);
@@ -163,7 +163,7 @@ public class TestUserService extends NXRuntimeTestCase {
     public void testValidatePassword() throws Exception {
         FakeUserManagerImpl fum = (FakeUserManagerImpl) userManager;
         assertTrue(fum.validatePassword(""));
-        pushInlineDeployments("org.nuxeo.ecm.platform.usermanager.tests:test-userservice-override-config.xml");
+        pushInlineDeployments("org.nuxeo.ecm.automation.features.tests:test-userservice-override-config.xml");
         fum = (FakeUserManagerImpl) userManager;
         assertFalse(fum.validatePassword(""));
         assertFalse(fum.validatePassword("azerty"));

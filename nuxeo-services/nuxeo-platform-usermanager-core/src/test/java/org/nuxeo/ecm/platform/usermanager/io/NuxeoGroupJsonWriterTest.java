@@ -32,7 +32,7 @@ import org.nuxeo.runtime.test.runner.Features;
 
 @Features(DirectoryFeature.class)
 @Deploy({ "org.nuxeo.ecm.core.cache", "org.nuxeo.ecm.platform.usermanager" })
-@Deploy({ "org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/directory-config.xml" })
+@Deploy({ "org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/directory-config.xml" })
 public class NuxeoGroupJsonWriterTest extends AbstractJsonWriterTest.External<NuxeoGroupJsonWriter, NuxeoGroup> {
 
     public NuxeoGroupJsonWriterTest() {

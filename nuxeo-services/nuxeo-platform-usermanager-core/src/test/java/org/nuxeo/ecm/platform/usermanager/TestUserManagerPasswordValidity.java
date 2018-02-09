@@ -37,7 +37,7 @@ import org.nuxeo.runtime.test.runner.Deploy;
  *
  * @since 8.4
  */
-@Deploy("org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/directory-config.xml")
+@Deploy("org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/directory-config.xml")
 public class TestUserManagerPasswordValidity extends UserManagerTestCase {
 
     private static final String BAD_PASSWORD = "a";

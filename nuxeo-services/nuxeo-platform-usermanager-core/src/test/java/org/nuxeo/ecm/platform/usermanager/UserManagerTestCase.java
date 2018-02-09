@@ -44,8 +44,8 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
         "org.nuxeo.ecm.platform.usermanager", //
         "org.nuxeo.ecm.platform.query.api", //
 })
-@Deploy({ "org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/usermanager-inmemory-cache-config.xml", //
-        "org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/userservice-config.xml", //
+@Deploy({ "org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/usermanager-inmemory-cache-config.xml", //
+        "org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/userservice-config.xml", //
 })
 public abstract class UserManagerTestCase {
 

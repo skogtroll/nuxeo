@@ -55,8 +55,8 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
         "org.nuxeo.ecm.platform.usermanager", //
         "org.nuxeo.ecm.platform.query.api", //
 })
-@Deploy({ "org.nuxeo.ecm.platform.usermanager.tests:computedgroups-contrib.xml", //
-        "org.nuxeo.ecm.platform.usermanager.tests:test-usermanagerimpl/directory-config.xml", //
+@Deploy({ "org.nuxeo.ecm.automation.features.tests:computedgroups-contrib.xml", //
+        "org.nuxeo.ecm.automation.features.tests:test-usermanagerimpl/directory-config.xml", //
 })
 public class TestGroupsPageProvider {
 
