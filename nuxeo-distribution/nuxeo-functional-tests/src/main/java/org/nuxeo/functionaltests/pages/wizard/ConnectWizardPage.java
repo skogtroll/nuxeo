@@ -28,7 +28,7 @@ import org.openqa.selenium.WebElement;
 
 public class ConnectWizardPage extends AbstractWizardPage {
 
-    protected static final String REGISTER_DIV_LOCATOR = "//div[@class=\"CSS_CLASS\"]";
+    protected static final String REGISTER_DIV_LOCATOR = "//div[@class='CSS_CLASS']";
 
     public ConnectWizardPage(WebDriver driver) {
         super(driver);
